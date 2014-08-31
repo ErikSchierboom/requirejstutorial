@@ -1,9 +1,9 @@
 {
-  "name": "optimizerequirejs",
-  "description": "Demo application that shows how to use r.js to optimize requirejs applications.",  
+  "name": "requirejstutorial",
+  "description": "A tutorial to show how to use the RequireJS library.",  
   "repository": {
     "type": "git",
-    "url": "https://github.com/ErikSchierboom/optimizerequirejs.git"
+    "url": "https://github.com/ErikSchierboom/requirejstutorial.git"
   },
   "keywords": [    
     "requirejs",
@@ -13,7 +13,7 @@
   "author": "Erik Schierboom",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/ErikSchierboom/optimizerequirejs/issues"
+    "url": "https://github.com/ErikSchierboom/requirejstutorial/issues"
   },
-  "homepage": "https://github.com/ErikSchierboom/optimizerequirejs"
+  "homepage": "https://github.com/ErikSchierboom/requirejstutorial"
 }
