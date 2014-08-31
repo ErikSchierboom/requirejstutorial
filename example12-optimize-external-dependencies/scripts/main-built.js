@@ -1,0 +1,1 @@
+define("messages",[],function(){return{getHello:function(){return"Hello World"}}}),define("app",["jquery","messages"],function(e,t){e(function(){alert(t.getHello())})}),require.config({paths:{jquery:"https://code.jquery.com/jquery-2.1.1"}}),requirejs(["app"]),define("main",function(){});

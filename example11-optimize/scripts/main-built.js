@@ -1,0 +1,1 @@
+define("messages",[],function(){return{getHello:function(){return"Hello World"}}}),define("gui",[],function(){return{showMessage:function(e){alert(e)}}}),define("app",["messages","gui"],function(e,t){t.showMessage(e.getHello())}),requirejs(["app"]),define("main",function(){});

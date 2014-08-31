@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    	<!-- Include the RequireJS library. We supply the "data-main" attribute to let 
+    	     RequireJS know which file it should load. This file (scripts/main-built.js)
+    	     can be seen as the entry point (main) of the application.
+
+             It is worth noting that here we include the "built"/optimized version of our
+             main file (which is main.js). This results in all dependencies being analyzed
+             and included in the "main-built.js" file, which means that not extra requests
+             to load other modules are made. -->
+        <script data-main="scripts/main-built" src="lib/require.js"></script>
+    </head>
+    <body>
+        <h1>Example 12: optimize using external dependendies</h1>
+    </body>
+</html>
