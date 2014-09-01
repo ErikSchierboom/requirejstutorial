@@ -1,4 +1,643 @@
-optimizerequirejs
-=================
+# RequireJS tutorial
+A tutorial to show how to use the RequireJS library through a series of samples.
 
-Demo application that shows how to use the r.js tool to optimize a requirejs application.
+## Why RequireJS?
+Although JavaScript is a very popular programming language, it lacks some features programmers take for granted. One of these omissions is a module system, which makes it hard to divide JavaScript code into small, re-usable parts. 
+
+Although the next JavaScript version *will* have [support for modules](http://eviltrout.com/2014/05/03/getting-started-with-es6.html), browser support is [virtually non-existent](http://kangax.github.io/compat-table/es6/). Luckily, there are JavaScript libraries that add support for modules. [RequireJS](http://requirejs.org/) is such a library. It implements the [Asynchronous Module Definition (AMD)](https://github.com/amdjs/amdjs-api/blob/master/AMD.md), which specifies an API that lets us define and use modules in our JavaScript code. A library that implements the AMD is known as an AMD loader.
+
+## Structure
+Although RequireJS is very powerful, its learning curve can be steep. This document aims to slowly build up your knowledge of RequireJS, starting with the basics and gradually moving on to more advanced functionality. We will do this through small, stand-alone examples.
+
+## Basics
+Before moving on to the examples, we'll introduce some basic concepts you need to understand when working with RequireJS.
+
+### Defining modules
+In the AMD specification, modules are defined using the `define()` function. The `define()` function takes as its argument the JavaScript value to return when the module is requested.
+
+This code defines a module that returns a number:
+
+```javascript
+define(5);
+```
+
+You can also return an object:
+
+```javascript
+define({
+    title: 'Master of Puppets',
+    artist: 'Metallica',
+    year: 1986
+});
+```
+
+When you need to do some setup work, you can pass a function to `define()`, in which the module's value is returned:
+
+```javascript
+define(function() {
+    var counter = 0;
+    
+    // Return the object value that is returned to requesters
+    return {
+        increment: function() {
+            counter++;
+        },
+ 
+        getValue: function() {
+            return counter;
+        }
+    };
+});
+```
+
+### Loading modules
+Defining modules is one part of the modules equation, loading them is the other. Just as you use a function to define a module, you use a function to load a module: `require()`.
+
+When you load a module, you refer to it by its module ID, which is just a simple `string`. The `define()` function takes an optional parameter that lets you specify a module's ID:
+
+```javascript
+// Define the module with module ID = 'album'
+define('album', {
+    title: 'Master of Puppets',
+    artist: 'Metallica',
+    year: 1986
+});
+```
+
+We can now load this module as follows:
+
+```javascript
+require(['album'], function(album) {
+    console.log(album.title); // Use the value returned by the 'album' module
+});
+```
+
+The first parameter of the `require()` function is an array of module IDs, also known as its dependencies. The AMD loader will try to load the modules with the specified module IDs. Once all modules have been loaded, the callback function passed as the second parameter is called. The values returned by each module will be passed as arguments to the callback function, in the order specified by the dependencies array.
+
+In our example, there is only one dependency: the module with ID `'album'`. Consequently, our callback method also has one parameter, which will contain the value returned by the `'album'` module.
+
+If a module doesn't explicitly specify a module ID, the AMD loader will define one for it based on the URL at which it is requested. This means that if you don't explicitly define a module ID, moving a module file to another location changes its module ID. Exactly how a module's ID is inferred will be discussed later.
+
+In general, it is considered bad practice to specify an ID for your modules, as you lose the link between path and module ID. This makes determining a module's ID less obvious.
+
+### Module dependencies
+So far, our modules did not depend on other modules. A module can depend on other modules by passing an array of the module IDs it depends on as its first parameter. The second parameter is the callback function that is called when all dependencies have been loaded. This is similar to our previous `require()` example. Within the callback function, we return our module's value:
+
+```javascript
+// Define a module with (two) dependencies
+define(['album', 'counter'], function(album, counter) {
+    return function() {
+        counter.increment();
+
+        return album.title + " requested " + counter.getValue() + " times";
+    }
+});
+```
+
+Note that the callback function's parameters are defined in the order of its dependencies. This means that the first parameter will get passed the value of the first module dependency (`'album'`); consequently, the second parameter corresponds to the `'counter'` module.
+
+### Main file
+Another important concept is that of a main file. When you include RequireJS in your application, you have to point it to a JavaScript file which it will consider to be your application's entry point, your main file. When your application runs, RequireJS will automatically load this main file and its code will be executed. 
+
+The function of the main file is twofold:
+
+* Run your application
+* Configure RequireJS (optional)
+
+To run your application, usually you load another module. You do this through the `requirejs` function, which will automatically be available in your main file. The following code is the most basic main file, which just loads the `'app'` module:
+
+```javascript
+requirejs(['app']);
+```
+
+The `'app'` module contains the actual application logic. You could define your application logic in the main file, but it is good practice to keep it out of your main file.
+
+The second function of the main file is to configure RequireJS. Configuring is done by passing the configuration options as an object parameter to `require.config`:
+
+```javascript
+require.config({
+    // Specify configuration options
+});
+```
+
+For the moment, we won't go into the various [configuration options](http://requirejs.org/docs/api.html#config). We'll see some of them later.
+
+### Module paths
+The last concept we need to introduce is that of module paths. When RequireJS requests a module, it loads that module using this template: `<base URL>/<module ID>.js`. This means that if our base URL is `scripts` and our module ID is `'app'`, RequireJS will try to load it from `scripts/app.js`. Similarly, if the base URL is `frontend/js` and the module ID is `'utils/message'`, the module will be loaded from `frontend/js/utils/message.js`.
+
+Using this template, it is possible to determine a module's ID by knowing the base URL and the URL at which the module can be found. So if you have a module that is located at `scripts/utils/messages.js` and you know the base URL is `scripts`, the module ID is therefore `'utils/messages'`.
+
+So how does RequireJS determine the base URL? By default, the base URL is set to the path from which the main file is loaded. So if the main file is located at `scripts/main.js`, the base URL is set to `scripts`. 
+
+Note that it is possible to use a custom base URL, but we will discuss that later.
+
+## Examples
+Now that we have learned the basics, we are ready to move on to our examples. We encourage you to clone this repository to your local machine to examine and play with the examples yourselves. The code for each example is in a separate directory. 
+
+### Example 1: basic usage
+Our first step to create a RequireJS application is to download the [`require.js`](http://requirejs.org/docs/download.html) library. We will store this file in a directory named `lib`.
+
+We then create an HTML file named `index.html` in the root of our directory. In this file we include the `require.js` file we just downloaded:
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+        <script data-main="scripts/main" src="lib/require.js"></script>
+    </head>
+    <body>
+        <h1>Example 1: basic usage</h1>
+    </body>
+</html>
+```
+
+One thing stands out: the `data-main` attribute of the `<script>` tag with source `lib/require.js`. This `data-main` attribute points to the JavaScript file that will automatically be loaded by RequireJS when the page is loaded: the main file. Note that the `data-main` value omits the `.js` extension; this is required as RequireJS will add the extension itself. 
+
+In our example, we set `data-main` to `scripts/main`, which means that RequireJS will try to load the main file from `scripts/main.js` file. Our next step is to create this file.
+
+As noted, the `main.js` file can be seen as the main entry point of your JavaScript application. In this file, two things can be done:
+
+1. Run your application
+2. Configure RequireJS (optional)
+
+In this example, we'll ignore the configuration options. To run our application, we could put the application logic in our `main.js` file, but the whole purpose of RequireJS is to use modules so let's use that.
+
+By convention, most main files load a module named `'app'`, which contains the application logic. The main file is nothing more than an entry point. Applying this to our example results in the following main file:
+
+```javascript
+requirejs(['app']); // Load the 'app' module
+```
+
+The final step is to create the `'app'` module, which just shows an alert when it is loaded:
+
+```javascript
+define(function () {
+    alert('Hello World');
+});
+```
+
+But where should we save our `'app'` module? By default, the base URL is set to the main file's path. As our main file was found at `scripts/main.js`, modules will be loaded from `scripts/<module ID>.js`. We thus save our `'app'` module in `scripts/app.js`:
+
+Now when you open the `index.html` file in a browser, the following things happen:
+
+1. The RequireJS file is loaded from `lib/require.js`
+2. RequireJS loads the main file from `scripts/main.js`
+3. The main file loads the `'app'` module from `scripts/app.js`
+4. The `'app'` module shows the alert message
+
+This chain of requests is typical of a RequireJS application. You start with a request for the RequireJS library, which requests the main file, which then requests a module. This module can then also request other modules (its dependencies), and so on. 
+
+#### Structure
+The end result of this example, when looking at it from a file viewpoint, looks like this:
+
+<pre>
+.
+├── lib
+|   └── require.js
+├── scripts
+|   ├── app.js
+|   └── main.js
+└── index.html
+</pre>
+
+And we now have a working RequireJS application!
+
+### Example 2: load module using explicit dependency syntax
+In our previous example, the `'app'` module did not depend on another module. Let's change that. First, we'll define the `'messages'` module that the `'app'` module will use:
+
+```javascript
+define(function () {
+    return {
+        getHello: function () {
+            return 'Hello World';
+        }
+    };
+});
+```
+
+This module returns an object with one function, `getHello()`, which returns a string.
+
+We can now have our `'app'` module use the `'messages'` module by specifying it as a dependency in the `'app'` module:
+
+```javascript
+define(['messages'], function (messages) {
+    alert(messages.getHello()); // Alerts 'Hello World'
+});
+```
+
+The dependency on the `'messages'` module is specified by passing its module ID in array form as the `define()` function's first parameter. When RequireJS loads the `'app'` module, it will see this dependency and start loading the `'messages'` module first. Once the `'messages'` module has been been loaded, RequireJS will call the `'app'` module's callback function with the value returned by the `'messages'` module as its parameter.
+
+### Example 3: load module using the require() function
+Sometimes, a module's dependencies are not know beforehand, or you might want to defer loading them to a later time. This scenario is be supported by modifying a module's definition to not take an array of dependencies, but only a callback with a single parameter. This parameter is a function that can take a module ID and load that module.
+
+In our previous example, the `'app'` module explicitly defined its dependency on the `'messages'` as follows:
+
+```javascript
+define(['messages'], function (messages) {
+    alert(messages.getHello()); // Alerts 'Hello World'
+});
+```
+
+We can get the same behavior by using the `require` parameter option:
+
+```javascript
+define(function (require) {
+    var messages = require('messages');
+    alert(messages.getHello());
+});
+```
+
+In general, the first option is preferred as it makes finding a module's dependencies easier. The second option is usually reserved for more advanced use cases.
+
+### Example 4: load multiple modules using explicit syntax
+So far, our modules only had a single dependency. To depend on more than one module, simple add the other module IDs to the dependencies array:
+
+```javascript
+define(['messages', 'gui'], function (messages, gui) {
+    gui.showMessage(messages.getHello());
+});
+```
+
+The following module depends on both the `'messages'` and `'gui'` modules.
+
+One can see that the order of the parameters in the callback function must correspond to the order of the dependencies.
+
+Note that the dependent modules are requested in parallel, no guarantees are made which of the modules loads first. However, RequireJS does guarantee that the callback function is only called when *all* modules have been loaded successfully. If one or more modules failed to load, the callback function will not be called.
+
+### Example 5: namespaces
+Although JavaScript has no native concept of namespaces, we can simulate them using RequireJS. For this, we use the fact that a module's ID is determined by its path.
+
+Consider the following directory structure:
+
+<pre>
+.
+├── lib
+|   └── require.js
+├── scripts
+|   ├── utils
+|   |   ├── output
+|   |   |   └── gui.js
+|   |   └── messages.js
+|   ├── app.js
+|   └── main.js
+└── index.html
+</pre>
+
+The `main.js` and `app.js` files are in the `scripts` directory, which will be the base URL. The `'app'` module has two dependencies:
+
+```javascript
+define(['utils/messages', 'utils/output/gui'], function (messages, gui) {
+    gui.showMessage(messages.getHello());
+});
+```
+
+When looking at the dependencies, one could argue  that the `'messages'` module appears to be part of the `utils` namespace and the `'gui'` module is part of the `utils/output` namespace.
+
+### Example 6: load modules using a relative path
+So far, modules were always defined in the same directory as our main file or in a sub-directory, but what to do with modules outside of this path? 
+
+Let's illustrate this problem with an example:
+
+<pre>
+├── lib
+|   ├── app.js
+|   ├── messages.js
+|   └── require.js
+├── scripts
+|   └── main.js
+└── index.html
+</pre>
+
+
+Our base URL here is `scripts`. That means that we cannot load the `'app'` module from our `main.js` file as follows:
+
+```javascript
+requirejs(['app']); // The module will fail to load
+```
+
+Requesting the `'app'` module like this, RequireJS will try to load it from `scripts/app.js`, which is not its correct location.
+
+What we want is to first go up one directory from our base URL (we are now at the root) and then load the `lib/app.js` file. To do this, we use the special `..` path:
+
+```javascript
+requirejs(['../lib/app']);
+```
+
+When RequireJS tries to load the `'../lib/app'` module, it first prepends the base URL: `scripts/../lib/app.js`. This path is then simplified to `lib/app.js`, which is the correct path for the `'app'` module.
+
+In the `'app'` module, we want to use the `'messages'` module, which is also outside the base URL. Once again, we could use the `..` special path:
+
+```javascript
+define(['../lib/messages'], function (messages) {
+    alert(messages.getHello());
+});
+```
+
+This code works, but there is an even better option. The special `.` path means: "load the module relative to the current module". This option bypasses the base URL and uses the path of the module in which it is used. 
+
+We could thus also include the `'messages'` module as follows:
+
+```javascript
+define(['./messages'], function (messages) {
+    alert(messages.getHello());
+});
+```
+
+### Example 7: custom base URL
+Up until now, the base URL used by RequireJS was always determined by the main file's location. However, you can explicitly set the base URL in your main file:
+
+```javascript
+require.config({    
+    baseUrl: 'lib'
+});
+```
+
+To see how this influences an application, considere the follows folder structure:
+
+<pre>
+.
+├── lib
+|   ├── require.js
+|   └── messages.js
+├── scripts
+|   └── app.js
+├── main.js
+└── index.html
+</pre>
+
+Our main file is located in the root. By default, the `'messages'` module's ID would thus be `'lib/messages'`. However, as we set the base URL to `lib`, its module ID becomes just `'messages'`.
+
+The `'app'` module can thus request the `'messages'` module as follows:
+
+```javascript
+define(['messages'], function (messages) {    
+    alert(messages.getHello());
+});
+```
+
+Finally, to load the `'app'` module from the `main.js` file, we have to use a path relative to our custom `lib` base URL:
+
+```javascript
+requirejs(['../scripts/app']);
+```
+
+### Example 8: explicit module ID
+Sometimes, you want to decouple a module's ID from its actual path. To do so, you can explicitly configure a module ID and its path in the main file.
+
+Say we are working with the following folder structure:
+
+<pre>
+.
+├── lib
+|   ├── utils
+|   |   └── messages.js
+|   ├── jquery-2.1.1.js
+|   └── require.js
+├── scripts
+|   ├── app.js
+|   └── main.js
+└── index.html
+</pre>
+
+If our `'app'` module depends on both the jQuery and `'messages'` modules, it would be defined like this:
+
+```javascript
+define(['../lib/jquery-2.1.1', '../lib/utils/messages'], function($, messages) {    
+    // ...
+});
+```
+
+While this is perfectly valid, we can clean this up by configuring a custom module ID for these modules. We do that by using the `paths` configuration option in our main file:
+
+```javascript
+require.config({
+    paths: {
+        'messages': '../lib/utils/messages',
+        'jquery': '../lib/jquery-2.1.1'
+    }
+});
+```
+
+What we are doing here is instructing RequireJS that when the `'messages'` module is requested, it should look for that at `../lib/utils/messages`. Similarly, the `'jquery'` module would be loaded from `../lib/jquery-2.1.1`. Note that the paths are relative to the base URL (which is `scripts`) and that you must omit the `.js` extension.
+
+Our `'app'` module now looks like this:
+
+```javascript
+define(['jquery', 'messages'], function($, messages) {    
+    // ...
+});
+```
+
+Note that if you work with the jQuery library, its module ID **must** be equal to `'jquery'`. For more information, see [how to use RequireJS with jQuery](http://requirejs.org/docs/jquery.html).
+
+### Example 9: external URL
+Up until now, all our modules were stored locally. However, it is also possible to load a module from an external URL. One use case for this would be to load a module from a [CDN](http://en.wikipedia.org/wiki/Content_delivery_network). To load a module from an external URL, we just set the path of the module to that URL:
+
+```javascript
+require.config({
+    paths: {
+        'jquery': 'https://code.jquery.com/jquery-2.1.1'
+    }
+});
+```
+
+Now when the `'jquery'` module is requested, it will be loaded from `https://code.jquery.com/jquery-2.1.1.js`.
+
+### Example 10: fallback paths
+When requesting a module, there is always the possibility that the module could not be loaded. This is especially true when you load a module from an external URL. To gracefully handle failure to load a module, RequireJS allows you to define a fallback path, which is used when the module could not be loaded from the original path. 
+
+To add a fallback, you define the module's path as an array of strings:
+
+```javascript
+require.config({
+    paths: {
+        'jquery': ['https://code.jquery.com/jquery-2.1.1', '../lib/jquery-2.1.1']
+    }
+});
+```
+
+What happens is that when the `'jquery'` module is requested, RequireJS will first try to load it by using the first path in the array. If that request fails, RequireJS will move to the next path in the array and try that, repeating this until either the module was loaded successfully or there are no more paths left to try. 
+
+The fallback option is often used when loading a module from an external URL, where a locally hosted file is used as a fallback. In our example, we instruct RequireJS to first try to load jQuery from an external URL, but upon failure to fall back to a local version of that file.
+
+Note that you could add more than one fallback by just adding more paths to the array:
+
+```javascript
+require.config({
+    paths: {
+        'jquery': ['https://code.jquery.com/jquery-2.1.1', 
+                   'https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery',
+                   'https://ajax.aspnetcdn.com/ajax/jQuery/jquery-2.1.1',
+                   '../lib/jquery-2.1.1']
+    }
+});
+```
+
+### Example 11: dependencies order
+When working with multiple libraries, it is not uncommon for one library to depend on another. An example of this is the [Bootstrap](http://getbootstrap.com/) library, which depends on [jQuery](http://jquery.com/). The first step is thus to define the paths to our our libraries:
+
+```javascript
+require.config({
+    paths: {
+        'jquery': '../lib/jquery-2.1.1',
+        'bootstrap': '../lib/bootstrap'
+    }
+});
+```
+
+We can then use these modules as follows:
+
+```javascript
+define(['jquery', 'bootstrap'], function($, bootstrap) {        
+    $(function() {        
+        $('.alert').alert();
+    });
+});
+```
+
+When you would run this code, you'd find that it would not always work. This is because RequireJS will request the `jquery` and `bootstrap` modules in parallel. When the `jquery` module loads first, everything is fine. However, if the `bootstrap` module is the first to load, it will throw an exception as its dependency jQuery has not yet been loaded. The key thing to note is that the order in which you define your dependencies does not have to correspond to the order in which they are loaded.
+
+To fix this problem, we have to do some additional configuration in our main file. There, you can define a `shim` section in which modules can be configured individually. To solve our dependency problem, we mark the `'jquery'` module as a dependency of the `'bootstrap'` module using the `deps` property:
+
+```javascript
+require.config({
+    paths: {
+        'jquery': '../lib/jquery-2.1.1',
+        'bootstrap': '../lib/bootstrap'
+    },
+
+    shim: {
+        'bootstrap': {
+            deps: ['jquery']
+        }
+    }
+});
+```
+
+Now when the `'bootstrap'` module is loaded, RequireJS will first load the `'jquery'` module. Only when the `'jquery'` has loaded successfully, will the `'bootstrap'` module be loaded. This fixes our dependency problem.
+
+Note that dependencies are defined as an array, which means that a module can have more than one dependency.
+
+### Example 12: optimize RequireJS using r.js
+By default, RequireJS will issue a request for each module its loads. Therefore, lots of modules means lots of requests. Obviously, this is not good for performance. Ideally, we would only load a single, minified file that contains all modules. For this, the [`r.js`](http://requirejs.org/docs/optimization.html) tool was developed. You run the `r.js` tool on a specific file, and `r.js` will then trace that file's dependencies and combine all of those dependencies and write them to a single file.
+
+Using `r.js` is very simple. You can choose to run it on node.js, Java or in the browser. We will use node.js in our example. To use r.js in node, install it using the following command:
+
+`npm install -g requirejs`
+
+At this point, we now have two options:
+
+1. Run `r.js` using command-line parameters
+2. Run `r.js` with a build profile
+
+The build profile and command-line options can do exactly the same things, they just have a different way of doing them. 
+
+In our example, we will be using a build profile. A build profile is a JavaScript file that defines the configuration options to use when optimizing. Here is our example's build profile:
+
+```javascript
+({
+    name: 'main',   
+    out: 'main-built.js'
+})
+```
+
+We specify two configuration options:
+
+* **name**: the name of the file to optimize. From this file, `r.js` will start to analyze the dependency chain. Usually, this would point to the main file.
+* **out**: the name of the file to which the optimized output should be written.
+
+Now we can run the following command to create our optimized `main-built.js` file:
+
+```node r.js -o build.js```
+
+Once the command has completed, the optimized output will have been written to `main-built.js`. 
+
+The last step is to use our optimized file instead of our old main file:
+
+```html
+<script data-main="scripts/main-built" src="lib/require.js"></script>
+```
+
+Now, there would be only a single request to the `scripts/main-built.js` file, instead of issuing a request for each module.
+
+### Example 12: optimize using external dependendies
+If you configured a module with an external URL (see example 9), you would expect `r.js` to not include this file when optimizing. However, if you would run `r.js` on this example you would get an error message. The problem is that `r.js` by default will include all dependent modules in the output file, but that it cannot work with external files. To work around this, you need to instruct `r.js` to ignore the modules that are loaded from an external URL.
+
+In our example, we used an external URL for the `'jquery'` module. We can instruct `r.js` to ignore the `'jquery'` module by setting its path to the special value: `'empty:'`:
+
+```javascript
+({
+    name: 'main',
+    out: 'main-built.js',
+    paths: {
+        'jquery': 'empty:'
+    }
+})
+```
+
+Now when you run `r.js`, the build will be successful and the `'jquery'` module will be loaded from its external URL.
+
+### Example 14: optimize using Grunt
+In the previous examples, we ran the `r.js` tool from the command-line. However, you can also run `r.js` from [Grunt](http://gruntjs.com/). First, install the following Node module:
+
+```
+npm install grunt-contrib-requirejs --save-dev
+```
+
+Then enable this task by adding the following to your `Gruntfile.js`:
+
+```javascript
+grunt.loadNpmTasks('grunt-contrib-requirejs');
+```
+
+We are now ready to configure the `r.js` optimization task in our Gruntfile:
+
+```javascript
+requirejs: {
+  compile: {
+    options: {
+      name: 'main',
+      baseUrl: 'scripts',
+      out: 'scripts/main-built.js'
+    }
+  }
+}
+```
+
+The supported configuration options are the same as when working directly with `r.js`. Note that if you do not explicitly set the base URL, the base URL will be equal to the path in which the `Gruntfile.js` file is located. As our main file is actually in the `scripts` directory, we needed to explicitly set the base URL.
+
+Now we can build the optimized version of our main file using:
+
+```
+grunt requirejs
+```
+
+### Example 15: load non-AMD module
+Although many libraries define themselves as AMD modules, not all of them do. For those libraries, RequireJS supports the concept of a *shim*. Using *shims*, one can access non-AMD modules as if they were defined as AMD modules.
+
+Take the [`singult`](https://github.com/lynaghk/singult) library (which can compile [Hiccup](https://github.com/weavejester/hiccup) templates). Instead of registering itself as an AMD module, it exports a global variable named `singult`. We thus need to tell RequireJS that when the `singult` module is requested, it should return the global `singult` variable. We do this in the `shim` configuration section of our main file:
+
+```javascript
+require.config({
+	paths: {
+		'singult': '../lib/singult.min'
+	},
+	shim: {
+        'singult': {
+            exports: 'singult'
+        }
+    }
+});
+```
+
+With this simple modification, we can now use the `singult` library like an AMD module:
+
+```javascript
+define(['singult'], function (singult) {	
+	var hiccup = ['div', {a: 1}, 'Hello World'];
+	var element = singult.render(hiccup);
+});
+```
+
+## License
+[Apache License 2.0](LICENSE)

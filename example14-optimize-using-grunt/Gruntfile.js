@@ -9,7 +9,6 @@ module.exports = function(grunt) {
     requirejs: {
       compile: {
         options: {
-
           // Explicity set the base URL. If we would not do this, the base URL
           // would be set to this file's directory, and then our main.js file
           // could not be located correctly

@@ -12,7 +12,7 @@
 // the 'messages' module.
 //
 // When requiring the 'jquery' module, RequireJS will request it from: "lib/jquery.js".
-// Similarly, the 'messages' module will be requested from "lib/messages.js".
+// The 'messages' module will be requested from "lib/utils/messages.js".
 define(['jquery', 'messages'], function($, messages) {    
 	// We use the object defined in the 'messages' module and passed to our
 	// callback by RequireJS and call its 'getHello'() function when the

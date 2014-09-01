@@ -5,8 +5,15 @@
     	     RequireJS know which file it should load. This file (scripts/main.js) can
     	     be seen as the entry point (main) of the application. -->
         <script data-main="scripts/main" src="lib/require.js"></script>
+
+        <!-- Include the bootstrap library stylesheets -->
+        <link rel="stylesheet" href="css/bootstrap.css">
     </head>
     <body>
-        <h1>Example 11: external dependencies order</h1>
+        <h1>Example 11: dependencies order</h1>
+
+        <div class="alert alert-warning fade in" role="alert">
+	      <strong>Hello World</strong>
+	    </div>
     </body>
 </html>
