@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+      <link rel="stylesheet" href="lib/qunit-1.15.0.css">
+
+      <!-- Include the QUnit library. Ideally, we'd include this as a
+           dependency in our RequireJS main file, but due to a race condition
+           this would fail. -->
+      <script type="text/javascript" src="lib/qunit-1.15.0.js"></script>
+
+      <script type="text/javascript">
+          // Configure QUnit to delay running the tests. We will start running the tests
+          // when they have been asynchronously loaded using RequireJS
+          QUnit.config.autoload = false;
+          QUnit.config.autostart = false;
+      </script>
+
+      <!-- Include the RequireJS library. We supply the "data-main" attribute to let 
+           RequireJS know which file it should load. This file (runner.js) can
+           be seen as the entry point (main) of the application. -->
+      <script data-main="runner" src="lib/require.js"></script>
+    </head>
+    <body>
+      <!-- This empty divs will be filled with the test results when QUnit has run its tests -->
+      <div id="qunit"></div>
+      <div id="qunit-fixture"></div>
+    </body>
+</html>

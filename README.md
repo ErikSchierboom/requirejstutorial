@@ -639,5 +639,213 @@ define(['singult'], function (singult) {
 });
 ```
 
+### Example 16: unit testing
+If you want to unit test using RequireJS, your unit test framework must support asynchronously loading tests. Luckily, most popular test frameworks [support this](https://github.com/jrburke/requirejs/wiki/Test-frameworks). In our example, we'll use [QUnit](http://qunitjs.com/) as our test framework.
+
+Let's start with the module we'll be testing:
+
+```javascript
+define(function () {
+    return {
+        add: function (x, y) {
+            return x + y;
+        }
+    };
+});
+```
+
+Well save this module in `scripts/math.js`. The next step is to define our test module:
+
+```javascript
+define(['QUnit', 'scripts/math'], function(QUnit, math) {
+    test('add should add positive numbers.', function() {
+        equal(math.add(3, 4), 7, 'The return should be 7.');
+        equal(math.add(5, 3), 8, 'The return should be 8.');
+    });
+
+    test('add should add negative numbers.', function() {
+        equal(math.add(-1, -2), -3, 'The return should be -3.');
+        equal(math.add(-2, -3), -5, 'The return should be -8.');
+    });
+});
+```
+
+The test module is a regular RequireJS module, with a dependency on the `'scripts/math'` module (which functionality is tested) and the `'QUnit'` module for the `test()` function.
+
+The next step is to create the HTML file that will be our test runner:
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+      <link rel="stylesheet" href="lib/qunit-1.15.0.css">
+
+      <!-- Include the RequireJS library. We supply the "data-main" attribute to 
+           let RequireJS know which file it should load. This file (runner.js) 
+           can be seen as the entry point (main) of the application. -->
+      <script data-main="runner" src="lib/require.js"></script>
+    </head>
+    <body>
+      <!-- This empty divs will be filled with the test results when QUnit 
+           has run its tests -->
+      <div id="qunit"></div>
+      <div id="qunit-fixture"></div>
+    </body>
+</html>
+```
+
+This file is similar to the HTML files we used in other examples, with some small differences:
+
+* A reference to the QUnit stylesheet has been added to style the test output
+* The RequireJS main file is now named `runner`. This is a convention, where the JavaScript file responsible for running the tests is called a *runner* (or *testrunner*)
+* Two empty `<div>` elements were added, which QUnit uses to display the test results
+
+The final step is to create the `runner.js` file, which is our RequireJS main file that acts as the test runner. In this file, we need to do several things:
+
+* Allow QUnit to be loaded as an AMD module. This is done by defining a `shim` section for `'QUnit'` with an `exports` section
+* Configure QUnit to not immediately start running the tests, as they'll be loaded asynchronously later. For this, we use the `init` configuration option in the `shim` section, which takes a function to execute when the library has been loaded.
+* Load the test module(s) using RequireJS and once they have been loaded, have QUnit start running its tests.
+
+We end up with the following `runner.js` file:
+
+```javascript
+require.config({
+    paths: {
+        'QUnit': 'lib/qunit-1.15.0'
+    },
+    shim: {
+       'QUnit': {
+           exports: 'QUnit',
+           init: function() {
+               // When the QUnit module is loaded, we have to 
+               // configure it to not automatically start running
+               // the tests as they'll be loaded later on
+               QUnit.config.autoload = false;
+               QUnit.config.autostart = false;
+           }
+       } 
+    }
+});
+
+// require the QUnit library and all test module
+require(['QUnit', 'tests/mathtests'], function(QUnit, mathTests) {
+    // Now that we have asynchronously loaded the tests
+    // we can give QUnit the signal to start running the tests
+    QUnit.load();
+    QUnit.start();
+});
+```
+
+Now we are ready to run our tests by simply viewing our `index.html` test runner file in a browser.
+
+#### Structure
+The resulting folder structure is as follows:
+
+<pre>
+.
+├── lib
+|   ├── qunit-1.15.0.css
+|   ├── qunit-1.15.0.js
+|   └── require.js
+├── scripts
+|   └── math.js
+├── tests
+|   └── mathtests.js
+├── index.html
+└── runner.js
+</pre>
+
+### Example 17: unit testing using Grunt
+In the previous example, we used a browser to run our unit tests. But what if you want to run RequireJS unit tests using Grunt, where code runs on the server and not in a browser?
+
+For this purpose, you can use the [`grunt-contrib-qunit`](https://github.com/gruntjs/grunt-contrib-qunit) plugin. This plugin can run your test runner HTML file(s) in a *headless browser*, which is basically full-featured browser without a GUI. We configure the `grunt-contrib-qunit` plugin as follows:
+
+```javascript
+grunt.initConfig({
+  qunit: {
+    all: {
+      options: {
+        urls: [
+          'http://localhost:8000/index.html'
+        ]
+      }
+    }
+  }
+});
+```
+
+Now when you run `grunt qunit`, you'll probably get an exception that the specified URL failed to load. This is because the `grunt-contrib-qunit` doesn't actually host anything. For this, we can use the [`grunt-contrib-connect`](https://github.com/gruntjs/grunt-contrib-connect) plugin, which is a simple, lightweight web-server. In our example, we configure the `connect` webserver to run at port `8000`, where the current directory is used as the webserver's root:
+
+```javascript
+grunt.initConfig({
+  connect: {
+    server: {
+      options: {
+        port: 8000,
+        base: '.'
+      }
+    }
+  }
+});
+```
+
+The next step is to combine these two plugins and assign them to the `test` task:
+
+```javascript
+grunt.registerTask('test', ['connect', 'qunit']);
+```
+
+Now, we can run `grunt test` which first starts the `connect` webserver and then runs the QUnit test runner. Unfortunately, if you try this you'll get the following error message:
+
+`PhantomJS timed out, possibly due to a missing QUnit start() call.`
+
+This is due to a race condition, where the code to disable automatically running the tests is executed too late. To work around this, we load and configure QUnit before we run our RequireJS code. This results in the following, modified `index.html` file:
+
+```html
+<!DOCTYPE html>
+<html>
+    <head>
+      <link rel="stylesheet" href="lib/qunit-1.15.0.css">
+
+      <!-- Include the QUnit library. Ideally, we'd include this as a
+           dependency in our RequireJS main file, but due to a race condition
+           this would fail. -->
+      <script type="text/javascript" src="lib/qunit-1.15.0.js"></script>
+
+      <script type="text/javascript">
+          // Configure QUnit to delay running the tests. We will start running 
+          // the testswhen they have been asynchronously loaded using RequireJS
+          QUnit.config.autoload = false;
+          QUnit.config.autostart = false;
+      </script>
+
+      <!-- Include the RequireJS library. We supply the "data-main" attribute to
+           let RequireJS know which file it should load. This file (runner.js) 
+           can be seen as the entry point (main) of the application. -->
+      <script data-main="runner" src="lib/require.js"></script>
+    </head>
+    <body>
+      <!-- This empty divs will be filled with the test results when QUnit 
+           has run its tests -->
+      <div id="qunit"></div>
+      <div id="qunit-fixture"></div>
+    </body>
+</html>
+```
+
+Of course, this also means that our `runner.js` changes, as we no longer need to load QUnit from it:
+
+```javascript
+// require the test modules
+require(['tests/mathtests'], function(mathTest) {
+    // Now that we have asynchronously loaded the tests
+    // we can give QUnit the signal to start running the tests
+    QUnit.load();
+    QUnit.start();
+});
+```
+
+With the modifications, we can now run `grunt test` and our tests will correctly execute.
+
 ## License
 [Apache License 2.0](LICENSE)
