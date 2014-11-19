@@ -855,6 +855,32 @@ require(['tests/mathtests'], function(mathTest) {
 
 With the modifications, we can now run `grunt test` and our tests will correctly execute.
 
+### Example 18: plugins
+RequireJS also supports plugins, such as the [text](https://github.com/requirejs/text) plugin. This plugin allows loading text resources, such as HTML or CSS files.
+
+Working with the `text` plugin is fairly simple. First, download the [`text.js`](https://raw.github.com/requirejs/text/latest/text.js) file. We'll save it to `lib/text.js`. Using a plugin is similar to working with modules. We can thus configure an explicit module ID for our `text` plugin in our main file:
+
+```javascript
+require.config({
+    paths: {
+        'text': '../lib/text'
+    }
+});
+```
+
+Now, we can use the `'text'` module ID to call the `text` plugin. When using the `text` plugin, you specify the text resource to load in the module ID. You do this by appending the `!` character followed by the text resource's path. Here is how we use the `text` plugin to request the `main.html` file in our `'app.js'` module:
+
+```javascript
+define(['text!main.html'], function(mainHtml) {    
+    // We alert the text retrieved from the "main.html" file    
+    alert(mainHtml);
+});
+```
+
+When this module is requested, RequireJS will load the `'text'` module. This module then loads the text resource specified in the module ID. Once the text resource has been loaded, the callback function is called with the contents of the text resource passed as the argument.
+
+Note that the text resource path is relative to the base URL.
+
 ### Conclusion
 RequireJS is a very useful library that fills a gap in the JavaScript language: a missing module system. Its learning curve can be steep, but when mastered you'll have the tools to better structure your JavaScript applications.
 
